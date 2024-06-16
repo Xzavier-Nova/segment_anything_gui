@@ -37,20 +37,18 @@ current_color = tuple(np.random.randint(0, 256, 3).tolist())
 # 鼠标点击事件处理函数
 def mouse_click(event, x, y, flags, param):
     global input_point, input_label, input_stop, scale_factor
-    # 如果未停止输入
     if not input_stop:
-        # 根据点击类型添加点和标签
+        # 将点击坐标反映射到原始图像上
+        orig_x = int(x / scale_factor)
+        orig_y = int(y / scale_factor)
+        # 左键点击表示选择感兴趣的点
         if event == cv2.EVENT_LBUTTONDOWN:
-            orig_x = int(x / scale_factor)
-            orig_y = int(y / scale_factor)
             input_point.append([orig_x, orig_y])
             input_label.append(1)
+        # 右键点击表示选择不感兴趣的点
         elif event == cv2.EVENT_RBUTTONDOWN:
-            orig_x = int(x / scale_factor)
-            orig_y = int(y / scale_factor)
             input_point.append([orig_x, orig_y])
             input_label.append(0)
-    # 如果已停止输入，只在点击时打印提示信息
     else:
         if event == cv2.EVENT_LBUTTONDOWN or event == cv2.EVENT_RBUTTONDOWN:
             print('此时不能添加点,按w退出mask选择模式')
@@ -58,7 +56,6 @@ def mouse_click(event, x, y, flags, param):
 
 # 应用遮罩到图像上，可选择是否使用alpha通道
 def apply_mask(image, mask, alpha_channel=True):
-    # 根据是否使用alpha通道进行图像处理
     if alpha_channel:
         alpha = np.zeros_like(image[..., 0])
         alpha[mask == 1] = 255
@@ -67,7 +64,6 @@ def apply_mask(image, mask, alpha_channel=True):
         image = np.where(mask[..., None] == 1, image, 0)
     return image
 
-
 # 为图像的指定区域应用颜色遮罩
 def apply_color_mask(image, mask, color, color_dark=0.5):
     # 根据遮罩应用颜色
@@ -75,10 +71,8 @@ def apply_color_mask(image, mask, color, color_dark=0.5):
         image[:, :, c] = np.where(mask == 1, image[:, :, c] * (1 - color_dark) + color_dark * color[c], image[:, :, c])
     return image
 
-
 # 生成下一个可用的文件名
 def get_next_filename(base_path, filename):
-    # 生成并检查新的文件名，直到找到一个不存在的
     name, ext = os.path.splitext(filename)
     for i in range(1, 101):
         new_name = f"{name}_{i}{ext}"
@@ -86,10 +80,8 @@ def get_next_filename(base_path, filename):
             return new_name
     return None
 
-
 # 保存带遮罩的图像，根据裁剪模式处理图像
 def save_masked_image(image, mask, output_dir, filename, crop_mode_):
-    # 根据裁剪模式处理图像和遮罩
     if crop_mode_:
         y, x = np.where(mask)
         y_min, y_max, x_min, x_max = y.min(), y.max(), x.min(), x.max()
@@ -98,7 +90,6 @@ def save_masked_image(image, mask, output_dir, filename, crop_mode_):
         masked_image = apply_mask(cropped_image, cropped_mask)
     else:
         masked_image = apply_mask(image, mask)
-    # 生成最终文件名并保存图像
     filename = filename[:filename.rfind('.')] + '.png'
     new_filename = get_next_filename(output_dir, filename)
     if new_filename:
@@ -110,23 +101,22 @@ def save_masked_image(image, mask, output_dir, filename, crop_mode_):
     else:
         print("Could not save the image. Too many variations exist.")
 
-
 # 将图像调整到指定的最大宽度和高度，同时保持宽高比
-def resize_image_to_screen(image, max_width, max_height):
-    # 计算缩放因子并调整图像大小
+def resize_image(image, max_side_length=1024):
     height, width = image.shape[:2]
-    scaling_factor = min(max_width / width, max_height / height)
+    scaling_factor = min(max_side_length / max(height, width), 1)  # 防止放大图像
     new_width = int(width * scaling_factor)
     new_height = int(height * scaling_factor)
     resized_image = cv2.resize(image, (new_width, new_height))
     return resized_image, scaling_factor
 
-
 # 初始化当前图像索引
 current_index = 0
 
-# 创建一个名为"image"的窗口，设置为正常大小并保持纵横比
-cv2.namedWindow("image", cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
+# 创建一个名为"image"的窗口，设置为不可调整大小
+cv2.namedWindow("image")
+cv2.setWindowProperty("image", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
+
 # 设置鼠标回调函数
 cv2.setMouseCallback("image", mouse_click)
 
@@ -136,6 +126,8 @@ while True:
     filename = image_files[current_index]
     # 读取原始图像
     image_orign = cv2.imread(os.path.join(input_dir, filename))
+    # 将图像等比例缩放至最长边为1024像素
+    image_orign, scale_factor = resize_image(image_orign)
     # 复制原始图像以用于裁剪
     image_crop = image_orign.copy()
     # 将原始图像转换为RGB格式
@@ -144,19 +136,7 @@ while True:
     selected_mask = None
     logit_input = None
 
-    # 根据屏幕大小调整图像显示尺寸
-    screen_width, screen_height = 1920, 1080  # Set your screen size or use dynamic retrieval
-    image_display, scale_factor = resize_image_to_screen(image_orign, screen_width, screen_height)
-
-    # 图像处理和显示循环
     while True:
-        # 获取窗口大小
-        window_width = cv2.getWindowProperty("image", cv2.WND_PROP_WIDTH)
-        window_height = cv2.getWindowProperty("image", cv2.WND_PROP_HEIGHT)
-
-        # 根据窗口大小调整图像大小
-        image_display, scale_factor = resize_image_to_screen(image_orign, window_width, window_height)
-
         # 设置退出标志
         input_stop = False
         # 组合显示信息
@@ -168,7 +148,6 @@ while True:
         image_display = image_orign.copy()
 
         # 在图像上绘制已选择的点和标签
-        # 在显示时调整点到缩放后的图像
         for point, label in zip(input_point, input_label):
             display_point = (int(point[0] * scale_factor), int(point[1] * scale_factor))
             color = (0, 255, 0) if label == 1 else (0, 0, 255)
@@ -189,13 +168,11 @@ while True:
 
         # 处理按键事件
         if key == ord(" "):
-            # 清空输入点和标签，以及选定的掩码和逻辑输入
             input_point = []
             input_label = []
             selected_mask = None
             logit_input = None
         elif key == ord("w"):
-            # 结束当前图像的处理，如果有点和标签输入，则进行预测
             input_stop = True
             if len(input_point) > 0 and len(input_label) > 0:
                 predictor.set_image(image)
@@ -275,3 +252,6 @@ while True:
     # 如果按下ESC键，则退出循环
     if key == 27:
         break
+
+# 释放窗口资源
+cv2.destroyAllWindows()
