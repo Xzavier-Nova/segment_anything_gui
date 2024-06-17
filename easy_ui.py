@@ -44,6 +44,7 @@ def mouse_callback(event, x, y, flags, param):
         point_label.append(0)
         print(f"Right Click at: {original_x}, {original_y}")
 
+
 # 创建一个窗口
 cv2.namedWindow('Image Window', cv2.WINDOW_NORMAL)
 cv2.setMouseCallback('Image Window', mouse_callback)
@@ -98,7 +99,6 @@ while True:
     elif key == ord("q") and len(point_loc) > 0:
         point_loc.pop(-1)
         point_label.pop(-1)
-
 
 # 关闭所有窗口
 cv2.destroyAllWindows()
