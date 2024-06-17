@@ -64,12 +64,14 @@ def apply_mask(image, mask, alpha_channel=True):
         image = np.where(mask[..., None] == 1, image, 0)
     return image
 
+
 # 为图像的指定区域应用颜色遮罩
 def apply_color_mask(image, mask, color, color_dark=0.5):
     # 根据遮罩应用颜色
     for c in range(3):
         image[:, :, c] = np.where(mask == 1, image[:, :, c] * (1 - color_dark) + color_dark * color[c], image[:, :, c])
     return image
+
 
 # 生成下一个可用的文件名
 def get_next_filename(base_path, filename):
@@ -79,6 +81,7 @@ def get_next_filename(base_path, filename):
         if not os.path.exists(os.path.join(base_path, new_name)):
             return new_name
     return None
+
 
 # 保存带遮罩的图像，根据裁剪模式处理图像
 def save_masked_image(image, mask, output_dir, filename, crop_mode_):
@@ -101,6 +104,7 @@ def save_masked_image(image, mask, output_dir, filename, crop_mode_):
     else:
         print("Could not save the image. Too many variations exist.")
 
+
 # 将图像调整到指定的最大宽度和高度，同时保持宽高比
 def resize_image(image, max_side_length=1024):
     height, width = image.shape[:2]
@@ -109,6 +113,7 @@ def resize_image(image, max_side_length=1024):
     new_height = int(height * scaling_factor)
     resized_image = cv2.resize(image, (new_width, new_height))
     return resized_image, scaling_factor
+
 
 # 初始化当前图像索引
 current_index = 0
