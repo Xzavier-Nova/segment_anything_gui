@@ -6,11 +6,11 @@ import numpy as np
 from predictor import get_predictor
 
 
-def show_ui(image, model_type='vit_b'):
+def show_ui(image, model_type='vit_b', is_gpu=False):
     original_height, original_width = image.shape[:2]
 
     model_type = model_type
-    predictor = get_predictor(model_type=model_type, is_gpu=False)  # segment_anything predictor
+    predictor = get_predictor(model_type=model_type, is_gpu=is_gpu)  # segment_anything predictor
 
     # 创建全局变量来存储点击位置和缩放比例
     point_loc = []
@@ -219,7 +219,7 @@ def show_ui(image, model_type='vit_b'):
 
 if __name__ == '__main__':
     src_image = cv2.imread('origin.webp')
-    masked_image = show_ui(src_image, model_type='vit_h')
+    masked_image = show_ui(src_image, model_type='vit_h', is_gpu=True)
     if masked_image.shape[-1] == 4:
         cv2.imwrite('./predicted_img.png', masked_image, [cv2.IMWRITE_PNG_COMPRESSION, 9])
     else:
